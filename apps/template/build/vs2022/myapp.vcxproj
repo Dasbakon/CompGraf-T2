@@ -66,10 +66,11 @@
       <PrecompiledHeaderOutputFile />
       <AdditionalIncludeDirectories>.;../../../../cg/externals/include;../../../../cg/include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalModuleDependencies>/D_ITERATOR_DEBUG_LEVEL=0</AdditionalModuleDependencies>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>../../../../cg/lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cgD.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cg.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
