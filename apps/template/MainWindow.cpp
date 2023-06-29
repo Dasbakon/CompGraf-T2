@@ -31,8 +31,8 @@
 // Last revision: 07/11/2022
 
 #include "MainWindow.h"
-#define STRINGFY(s) "#version 400\n"#s //é um macro -gera uma string cujo conteudo é o que ta em "" 
-static const char* fs = STRINGFY(
+#define STRINGIFY(s) "#version 400\n"#s //é um macro -gera uma string cujo conteudo é o que ta em "" 
+static const char* fs = STRINGIFY(
   in vec4 color;//entrada do shader -> se ela é entrada, é saída do shader anterior
 out vec4 fragColor;//saída do shader
 void main()
@@ -74,7 +74,6 @@ namespace cube
     cg::Color{1.0f, 1.0f, 1.0f}, // 6
     cg::Color{0.0f, 1.0f, 1.0f}  // 7
   };
-
   static const uint3 t[]
   {
     {0, 3, 1}, {1, 3, 2}, // back
@@ -86,12 +85,16 @@ namespace cube
   };
 
 } // end namespace cube
+namespace sphere 
+{
+  
+}
 //shader de vertice tem q determinar glposition (coordenadas de recorte x,y,z e w)
 //rasterizacao determina todos os pixels do triangulo, para cada um deles roda o shader de fragmento
 //fragmento pertencente a face da frente vira pixel
 //nosso shader de fragmento vai definir a cor e passar p frente
 //agora o shader de vertice
-static const char* vs = STRINGFY(
+static const char* vs = STRINGIFY(
   layout(location = 0) in vec4 vertex;
 layout(location = 1) in vec4 vertexColor;
 uniform mat4 transf;
@@ -129,6 +132,92 @@ void main()
 //   color = colors[gl_VertexID];
 // }
 );
+static const char* vs2 = STRINGIFY(
+  layout(location = 0) in vec4 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec4 color;
+uniform mat4 mvMatrix;
+uniform mat3 normalMatrix;
+uniform mat4 mvpMatrix;
+out vec3 vPosition;
+out vec3 vNormal;
+out vec4 vColor;
+
+void main()
+{
+  vPosition = vec3(mvMatrix * position);
+  vNormal = normalize(normalMatrix * normal);
+  gl_Position = mvpMatrix * position;
+  vColor = color;
+}
+);
+
+static const char* fs2 = STRINGIFY(
+  struct Material {
+  vec3 albedo;
+  float roughness;
+  float metallic;
+};
+
+in vec3 FragPos;
+in vec3 Normal;
+in vec2 TexCoords;
+
+uniform vec3 viewPos;
+uniform Material material;
+
+uniform struct Light {
+  vec3 position;
+  vec3 color;
+} light;
+
+vec3 computeDiffuse(vec3 fragColor, vec3 normal, vec3 lightDir) {
+  float diff = max(dot(normal, lightDir), 0.0);
+  return diff * light.color * fragColor;
+}
+
+vec3 computeSpecular(vec3 fragColor, vec3 normal, vec3 lightDir, vec3 viewDir) {
+  vec3 halfwayDir = normalize(lightDir + viewDir);
+  float spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);   // Exponente de especularidade
+  return spec * light.color * fragColor;
+}
+
+vec3 computeReflection(vec3 viewDir, vec3 normal, vec3 lightDir, vec3 diffuseColor, float roughness) {
+  vec3 reflectDir = reflect(-viewDir, normal);
+  vec3 halfwayDir = normalize(lightDir + viewDir);
+
+  float dotNL = max(dot(normal, lightDir), 0.0);
+  float dotNV = max(dot(normal, viewDir), 0.0);
+  float dotNH = max(dot(normal, halfwayDir), 0.0);
+  float dotLH = max(dot(lightDir, halfwayDir), 0.0);
+
+  vec3 F0 = vec3(0.04);   // Coeficiente de Fresnel para dielétricos
+  vec3 diffuse = (1.0 - F0) * diffuseColor / 3.14159;
+
+  vec3 specular = specularReflection(dotNH, roughness, F0);
+
+  return (diffuse + specular) * light.color * dotNL * dotNV / (dotLH + 0.001);
+}
+
+vec3 computeLighting() {
+  vec3 n = normalize(Normal);
+  vec3 v = normalize(viewPos - FragPos);
+  vec3 l = normalize(light.position - FragPos);
+
+  vec3 diffuse = computeDiffuse(material.albedo, n, l);
+  vec3 specular = computeSpecular(material.albedo, n, l, v);
+
+  vec3 reflection = computeReflection(v, n, l, material.albedo, material.roughness);
+
+  return diffuse + specular + reflection;
+}
+
+void main()
+{
+  vec3 lighting = computeLighting();
+  gl_FragColor = vec4(lighting, 1.0);
+}
+);
 
 /////////////////////////////////////////////////////////////////////
 //
@@ -151,6 +240,7 @@ size(int count)
 {
   return count * sizeof(T);
 }
+
 
 void
 MainWindow::initialize()
@@ -187,6 +277,7 @@ MainWindow::initialize()
   _program.setShaders(vs, fs).use();//vs, fs -> shader de vertice, shader de fragmento
 }
 
+
 void
 MainWindow::update()
 {
@@ -198,15 +289,15 @@ MainWindow::update()
 }
 
 void
-//MainWindow::renderScene()
 MainWindow::render()
 {
   // Put your scene rendering code here. 
   clear(cg::Color::darkGray);//limpa a tela e coloca darkgray de cor de fundo
   _program.setUniformMat4("transf", _transf);
 
+  
   glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-  // glDrawArrays(GL_TRIANGLES, 0,36);
+  //glDrawArrays(GL_TRIANGLES, 0,36);
   //funcao de desenho da openGl( , 0 ->contador offset - pula tantos e vai até->,numero de vertices) -cada triangulo fornece 3 vertices, vai repetir vertice msm
   //36 pq sao 12 triangulos p fazer um cubo
 }
@@ -219,7 +310,6 @@ MainWindow::keyInputEvent(int key, int action, int mods)
     switch (key)
     {
       case GLFW_KEY_P:
-        _animate ^= true;
         return true;
     }
   return Base::keyInputEvent(key, action, mods);
@@ -241,19 +331,6 @@ MainWindow::gui()
 
   _program.setUniformMat4("transf", _transf);
   ImGui::End();
-
-  // ImGui::Begin("Template GUI");
-  // ImGui::ColorEdit3("Line Color", (float*)&_lineColor);
-  // ImGui::ColorEdit3("Mesh Color", (float*)&_meshColor);
-  // ImGui::Separator();
-  // ImGui::Checkbox("Animate", &_animate);
-  // ImGui::SliderFloat("Speed", &_speed, 0.001f, 0.01f);
-  // ImGui::Checkbox("Show Ground", &_showGround);
-  // ImGui::Separator();
-  // ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-  // deltaTime(),
-  // ImGui::GetIO().Framerate);
-  // ImGui::End();//->abre janela que nao tem nada, so tem titulo
 }
 
 void

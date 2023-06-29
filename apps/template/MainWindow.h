@@ -35,6 +35,7 @@
 
 #include "graphics/GLWindow.h"
 #include "graphics/GLRenderWindow3.h"
+#include "graphics/GLGraphics3.h"
 
 
 /////////////////////////////////////////////////////////////////////
@@ -69,7 +70,7 @@ private:
   void render() override;
   //bool keyInputEvent(int, int, int) override;
   void gui() override;
-  void terminate() override;
+  void terminate() override;  
 
 }; // MainWindow
 

@@ -20,7 +20,6 @@ Global
 		{4780518D-AFF4-44A9-BF4B-4329D56FF751}.Debug|x64.ActiveCfg = Debug|x64
 		{4780518D-AFF4-44A9-BF4B-4329D56FF751}.Debug|x64.Build.0 = Debug|x64
 		{4780518D-AFF4-44A9-BF4B-4329D56FF751}.Release|x64.ActiveCfg = Release|x64
-		{4780518D-AFF4-44A9-BF4B-4329D56FF751}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
